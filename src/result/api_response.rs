@@ -10,11 +10,11 @@ pub enum ApiResponse {
 
 #[derive(Deserialize, Debug)]
 pub struct ApiErrorResponse {
-    code: ErrorCode,
-    message: String,
+    pub code: ErrorCode,
+    pub message: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub enum ErrorCode {
     Success,
     Unauthorized,

@@ -1,9 +1,9 @@
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
-use crate::model::chat_request::{ChatRequestParam, ChatMessage};
-use crate::result::ApiResponse;
 use crate::config::Config;
-use crate::result::api_response::ApiErrorResponse;
+use crate::model::chat_message::ChatMessage;
+use crate::model::chat_request::ChatRequestParam;
+use crate::result::ApiResponse;
+use crate::result::api_response::{ApiErrorResponse, ErrorCode};
+use reqwest::Client;
 
 pub async fn send_message(message: &str, config: &Config) -> ApiResponse {
     let client = Client::new();
@@ -16,21 +16,31 @@ pub async fn send_message(message: &str, config: &Config) -> ApiResponse {
         }],
     };
 
-    let response = match client.post(&config.post_url)
+    let response = match client
+        .post(&config.post_url)
         .header("Authorization", format!("Bearer {}", &config.api_key))
         .json(&request)
         .send()
-        .await {
-            Ok(response) => response,
-            Err(e) => return ApiResponse::Error(ApiErrorResponse {
-                code: ErrorCode::Unknown(response.status().as_u16()),
+        .await
+    {
+        Ok(response) => response,
+        Err(e) => {
+            return ApiResponse::Error(ApiErrorResponse {
+                code: ErrorCode::Unauthorized,
                 message: e.to_string(),
-            }),
-        };
+            });
+        }
+    };
+    let status = response.status().as_u16();
 
     let chat_response = match response.json().await {
         Ok(data) => data,
-        Err(e) => return ApiResponse::Error(e.to_string()),
+        Err(e) => {
+            return ApiResponse::Error(ApiErrorResponse {
+                code: ErrorCode::from_u16(status),
+                message: e.to_string(),
+            });
+        }
     };
     ApiResponse::Success(chat_response)
 }

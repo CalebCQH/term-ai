@@ -1,13 +1,9 @@
-use serde::{Deserialize, Serialize};
+use serde::{Serialize};
+
+use crate::model::chat_message::ChatMessage;
 
 #[derive(Serialize)]
 pub struct ChatRequestParam {
     pub model: String,
     pub messages: Vec<ChatMessage>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ChatMessage {
-    pub role: String,
-    pub content: String,
 }
