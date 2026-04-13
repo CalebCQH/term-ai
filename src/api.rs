@@ -1,11 +1,11 @@
-use crate::config::Config;
+use crate::config;
 use crate::model::chat_message::ChatMessage;
 use crate::model::chat_request::ChatRequestParam;
 use crate::result::ApiResponse;
 use crate::result::api_response::{ApiErrorResponse, ErrorCode};
 use reqwest::Client;
 
-pub async fn send_message(message: &str, config: &Config) -> ApiResponse {
+pub async fn send_message(message: &str, config: &config::api_config::Config) -> ApiResponse {
     let client = Client::new();
 
     let request = ChatRequestParam {
