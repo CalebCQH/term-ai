@@ -5,7 +5,7 @@ use crate::result::ApiResponse;
 use crate::result::api_response::{ApiErrorResponse, ErrorCode};
 use reqwest::Client;
 
-pub async fn send_message(message: &str, config: &config::api_config::Config) -> ApiResponse {
+pub async fn send_message(message: &str, config: &config::api_config::ApiConfig) -> ApiResponse {
     let client = Client::new();
 
     let request = ChatRequestParam {
