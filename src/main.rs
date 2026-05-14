@@ -1,31 +1,34 @@
-mod config;
 mod api;
-mod ui;
+mod config;
+mod error;
 mod model;
 mod result;
+mod ui;
+
+use error::AppError;
+
+async fn run(chat: String) -> Result<(), AppError> {
+    let config = config::api_config::load_config().await?;
+    match api::send_message(&chat, &config).await {
+        result::ApiResponse::Success(response) => {
+            let content = &response.choices[0].message.content;
+            println!("{}", content);
+            Ok(())
+        }
+        result::ApiResponse::Error(e) => Err(AppError::Api(format!("{:?}", e))),
+    }
+}
 
 #[tokio::main]
 async fn main() {
-    
     let chat = {
-            println!("请输入对话:");
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input).unwrap();
-            input.trim().to_string()
-        };
-    // let config = config::api_config::ApiConfig {
-    //     // id: "1".to_string(),
-    //     model: "MiniMax-M2.7".to_string(),
-    //     post_url: "https://api.minimaxi.com/v1/chat/completions".to_string(),
-    //     api_key: "sk-cp-w1kmO3saYZ9KPgz-gz7o0CRsA-OkHXNmtmF1y2SE6CdnW2RZQ_secwWl_CXDx9ssWpcafIIhZ-pNN35CJ1IKwYMRuYotuQbERfzlHfP6Ai53COeS2m4Urig".to_string(),
-    // };
-    match api::send_message(&chat, &config::api_config::load_config()).await {
-        result::ApiResponse::Success(response) => {
-            let content = &response.choices[0].message.content;
-            println!("{}", content)
-        }
-        result::ApiResponse::Error(e) => {
-            eprintln!("{:?}", e);
-        }
+        println!("请输入对话:");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+        input.trim().to_string()
+    };
+
+    if let Err(e) = run(chat).await {
+        eprintln!("错误: {}", e);
     }
 }
