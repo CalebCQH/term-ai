@@ -1,2 +1,2 @@
-pub mod api_response;
-pub use api_response::ApiResponse;
+pub mod error;
+pub use error::AppError;
