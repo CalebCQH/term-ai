@@ -25,7 +25,7 @@ pub struct BaseConfig {
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct ApiConfig {
     // pub id: String,
-    // pub max_tokens: usize,
+    pub max_tokens: usize,
     pub model: String,
     pub post_url: String,
     pub api_key: String,
@@ -41,9 +41,9 @@ impl BaseConfig {
 }
 
 impl ApiConfig {
-    fn new(model: String, post_url: String, api_key: String) -> Self {
+    fn new(max_tokens: usize, model: String, post_url: String, api_key: String) -> Self {
         Self {
-            // max_tokens: max_tokens,
+            max_tokens: max_tokens,
             model: model,
             post_url: post_url,
             api_key: api_key,
@@ -84,16 +84,16 @@ pub async fn get_current_model() -> Result<ApiConfig, AppError> {
 pub async fn configure_model() -> Result<ApiConfig, AppError> {
     let stdin = tokio::io::stdin();
     let mut reader = BufReader::new(stdin);
-    // let max_tokens: usize = match read_line("请配置最大令牌数：", &mut reader).await?.parse()
-    // {
-    // Ok(it) => it,
-    // Err(err) => return Err(AppError::Config(err.to_string())),
-    // };
+    let max_tokens: usize = match read_line("请配置最大令牌数：", &mut reader).await?.parse()
+    {
+        Ok(it) => it,
+        Err(err) => return Err(AppError::Config(err.to_string())),
+    };
     let model_name = read_line("请配置模型名称：", &mut reader).await?;
     let model_url = read_line("请配置模型URL：", &mut reader).await?;
     let api_key = read_line("请配置API密钥：", &mut reader).await?;
     // 配置
-    let api_config = ApiConfig::new(model_name, model_url, api_key);
+    let api_config = ApiConfig::new(max_tokens, model_name, model_url, api_key);
     let mut lock = BASE_CONFIG.lock().await;
     let exists = lock.models.contains_key(&api_config.model);
     if exists {

@@ -5,8 +5,10 @@ use crate::{
     commands::{Cli, exit},
     config::api_config::{BASE_CONFIG, configure_model, get_current_model},
     model::{
-        chat_message::{ChatMessage, ChatTypeEnum},
-        chat_rules::ChatRules,
+        chat_message::ChatMessage,
+        chat_response::{ChatResponse, ContentTypeEnum},
+        chat_roles::ChatRoles,
+        chat_type::ChatTypeEnum,
     },
     result::AppError,
 };
@@ -18,6 +20,7 @@ mod model;
 mod result;
 
 async fn run<'a>(
+    is_stream: bool,
     chat: &'a str,
     history: &'a [ChatMessage],
 ) -> Result<Vec<ChatMessage>, result::AppError> {
@@ -31,19 +34,71 @@ async fn run<'a>(
     let mut message: Vec<ChatMessage> = Vec::with_capacity(history.len() + 1);
     message.extend(history.iter().cloned());
     let chat_message = ChatMessage::new(
-        ChatRules::User.display_name(),
-        ChatTypeEnum::Text.display(),
-        chat.to_string(),
+        ChatRoles::User.display_name().as_str(),
+        ChatTypeEnum::Text.display().as_str(),
+        chat,
     );
     message.push(chat_message.clone());
+    // Create an API request and get the response.
     let response = api::send_message(message.as_slice(), model_config).await?;
-    println!("{:?}", response.choices[0].message.content);
-    let chat_resp = ChatMessage::new(
-        ChatRules::Assistant.display_name(),
-        ChatTypeEnum::Text.display(),
-        response.choices[0].message.content.clone(),
-    );
-    Ok(vec![chat_message, chat_resp])
+    handle_chat(response, chat_message).await
+}
+
+async fn handle_chat_stream(
+    response: ChatResponse,
+    chat_message: ChatMessage,
+) -> Result<Vec<ChatMessage>, result::AppError> {
+    let mut chat_messages = vec![chat_message];
+    let content = response
+        .content
+        .iter()
+        .map(|content| match content {
+            ContentTypeEnum::TextDelta { text } => todo!(),
+            ContentTypeEnum::ThinkingDelta { thinking } => todo!(),
+            ContentTypeEnum::Signature { signature } => todo!(),
+            _ => unreachable!("收到了不可能的数据"),
+        })
+        .collect::<Vec<_>>();
+    chat_messages.extend(content.iter().map(|c| {
+        ChatMessage::new(
+            ChatRoles::Assistant.display_name().as_str(),
+            ChatTypeEnum::Text.display().as_str(),
+            c,
+        )
+    }));
+    Ok(chat_messages)
+}
+
+async fn handle_chat(
+    response: ChatResponse,
+    chat_message: ChatMessage,
+) -> Result<Vec<ChatMessage>, result::AppError> {
+    let mut chat_messages = vec![chat_message];
+    let content = response
+        .content
+        .iter()
+        .map(|content| match content {
+            ContentTypeEnum::Text { text } => {
+                let text = format!("回复：{}", text.clone());
+                println!("{}", text);
+                text
+            }
+            ContentTypeEnum::Thinking { thinking, .. } => {
+                let thinking = format!("思考：{}", thinking.clone());
+                println!("{}", thinking);
+                thinking
+            }
+            _ => unreachable!("收到了不可能的数据"),
+        })
+        .collect::<Vec<_>>();
+    chat_messages.extend(content.iter().map(|c| {
+        ChatMessage::new(
+            ChatRoles::Assistant.display_name().as_str(),
+            ChatTypeEnum::Text.display().as_str(),
+            c,
+        )
+    }));
+    Ok(chat_messages)
 }
 
 async fn init() -> Result<config::api_config::ApiConfig, result::AppError> {
@@ -74,7 +129,11 @@ async fn main() -> Result<(), result::AppError> {
                         match try_parse_from {
                             Ok(cli) => match &cli.command {
                                 commands::Command::Chat { message } => {
-                                    let chat_resp = run(&message, &history).await?;
+                                    let chat_resp = run(false, &message, &history).await?;
+                                    history.extend(chat_resp);
+                                }
+                                commands::Command::ChatStream { message } => {
+                                    let chat_resp = run(true, &message, &history).await?;
                                     history.extend(chat_resp);
                                 }
                                 commands::Command::Models => {
@@ -86,7 +145,7 @@ async fn main() -> Result<(), result::AppError> {
                                 commands::Command::ShowModel { name } => {
                                     let base_config = BASE_CONFIG.lock().await;
                                     if let Some(model) = base_config.models.get(name) {
-                                        println!("{}", model.model);
+                                        println!("{:?}", model);
                                     } else {
                                         println!("未找到模型: {}", name);
                                     }

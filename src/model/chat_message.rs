@@ -1,36 +1,26 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatMessage {
     pub role: String,
-    pub content: ChatType,
+    pub content: Vec<ChatContent>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ChatType {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatContent {
     #[serde(rename = "type")]
-    pub test_type: String,
+    pub chat_type: String,
     pub text: String,
 }
 
-pub enum ChatTypeEnum {
-    Text,
-}
-
 impl ChatMessage {
-    pub fn new(role: String, test_type: String, text: String) -> Self {
-        let chat_type = ChatType { test_type, text };
+    pub fn new(role: &str, chat_type: &str, text: &str) -> Self {
         Self {
-            role,
-            content: chat_type,
-        }
-    }
-}
-
-impl ChatTypeEnum {
-    pub fn display(&self) -> String {
-        match self {
-            ChatTypeEnum::Text => "text".to_string(),
+            role: role.to_string(),
+            content: vec![ChatContent {
+                chat_type: chat_type.to_string(),
+                text: text.to_string(),
+            }],
         }
     }
 }
