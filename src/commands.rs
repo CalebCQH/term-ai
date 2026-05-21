@@ -17,11 +17,6 @@ pub enum Command {
         /// The message to send
         message: String,
     },
-    /// Send a chat message and stream the response
-    ChatStream {
-        /// The message to send
-        message: String,
-    },
     /// Lisrt all available models
     Models,
     /// Show the details of a model
